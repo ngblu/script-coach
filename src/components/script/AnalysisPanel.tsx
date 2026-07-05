@@ -55,7 +55,18 @@ export default function AnalysisPanel({
 
       {/* Summary */}
       <div className="bg-surface border border-border rounded-xl p-5">
-        <h3 className="text-sm font-semibold text-text-primary mb-2">Summary</h3>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-semibold text-text-primary">Summary</h3>
+          {latest.model && (
+            <span className={`px-2 py-0.5 text-[10px] rounded-full font-medium ${
+              latest.model.includes("opus")
+                ? "bg-accent/10 text-accent border border-accent/20"
+                : "bg-primary/10 text-primary border border-primary/20"
+            }`}>
+              {latest.model.includes("opus") ? "Claude Opus" : "DeepSeek"}
+            </span>
+          )}
+        </div>
         <p className="text-sm text-text-secondary leading-relaxed">{latest.summary}</p>
       </div>
 

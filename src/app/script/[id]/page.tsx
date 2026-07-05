@@ -8,6 +8,7 @@ import {
   Sparkles,
   Plus,
   Minus,
+  Brain,
 } from "lucide-react";
 import { useScript, updateScript } from "@/lib/store";
 import type { AnalysisResult, ScriptVersion, Outcome } from "@/lib/types";
@@ -33,6 +34,7 @@ function ScriptDetailInner({
   const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null);
   const [activeTab, setActiveTab] = useState<"edit" | "analysis" | "versions" | "outcomes">("edit");
   const [analyzing, setAnalyzing] = useState(false);
+  const [model, setModel] = useState<"deepseek/deepseek-chat" | "anthropic/claude-opus-4">("deepseek/deepseek-chat");
   const router = useRouter();
 
   // Resolve params
@@ -66,7 +68,7 @@ function ScriptDetailInner({
       const res = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ script: script.content, title: script.title }),
+        body: JSON.stringify({ script: script.content, title: script.title, model }),
       });
       if (!res.ok) throw new Error("Analysis failed");
       const analysis: AnalysisResult = await res.json();
@@ -75,7 +77,7 @@ function ScriptDetailInner({
       });
       setActiveTab("analysis");
     } catch (err) {
-      alert("Analysis failed. Make sure your OpenAI API key is set in Settings.");
+      alert("Analysis failed. Is the Hermes bridge running?");
     } finally {
       setAnalyzing(false);
     }
@@ -144,14 +146,40 @@ function ScriptDetailInner({
             Updated {formatDate(script.updatedAt)}
           </p>
         </div>
-        <button
-          onClick={handleAnalyze}
-          disabled={analyzing || !script.content.trim()}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-        >
-          <Sparkles className={`w-4 h-4 ${analyzing ? "animate-spin" : ""}`} />
-          {analyzing ? "Analyzing..." : "Analyze Script"}
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Model selector */}
+          <div className="flex items-center gap-1 bg-surface border border-border rounded-lg p-0.5">
+            <button
+              onClick={() => setModel("deepseek/deepseek-chat")}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                model === "deepseek/deepseek-chat"
+                  ? "bg-primary/10 text-primary border border-primary/20"
+                  : "text-text-muted hover:text-text-secondary"
+              }`}
+            >
+              DeepSeek
+            </button>
+            <button
+              onClick={() => setModel("anthropic/claude-opus-4")}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                model === "anthropic/claude-opus-4"
+                  ? "bg-accent/10 text-accent border border-accent/20"
+                  : "text-text-muted hover:text-text-secondary"
+              }`}
+            >
+              Opus
+            </button>
+          </div>
+
+          <button
+            onClick={handleAnalyze}
+            disabled={analyzing || !script.content.trim()}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+          >
+            <Sparkles className={`w-4 h-4 ${analyzing ? "animate-spin" : ""}`} />
+            {analyzing ? "Analyzing..." : "Analyze Script"}
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}

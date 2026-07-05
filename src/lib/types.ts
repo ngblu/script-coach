@@ -8,6 +8,7 @@ export interface ScriptVersion {
 export interface AnalysisResult {
   id: string;
   createdAt: string;
+  model?: string;
   overallScore: number;
   scores: {
     clarity: number;
