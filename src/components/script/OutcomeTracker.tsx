@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Check, X, Clock, Calendar, MessageSquare, Trash2 } from "lucide-react";
 import type { Outcome, ScriptVersion } from "@/lib/types";
 import { generateId, formatDate } from "@/lib/utils";
@@ -24,6 +24,11 @@ export default function OutcomeTracker({ outcomes, versions, onAdd, onDelete }: 
   const [result, setResult] = useState<Outcome["result"]>("won");
   const [notes, setNotes] = useState("");
   const [versionId, setVersionId] = useState(versions[versions.length - 1]?.id || "");
+
+  // Sync versionId when versions change (e.g., new version saved)
+  useEffect(() => {
+    setVersionId(versions[versions.length - 1]?.id || "");
+  }, [versions]);
 
   const handleSubmit = () => {
     if (!versionId) return;
@@ -92,6 +97,9 @@ export default function OutcomeTracker({ outcomes, versions, onAdd, onDelete }: 
             onChange={(e) => setVersionId(e.target.value)}
             className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-text-primary focus:outline-none focus:border-primary/30"
           >
+            {versions.length === 0 && (
+              <option value="" disabled>No versions yet — save your script first</option>
+            )}
             {versions.map((v) => (
               <option key={v.id} value={v.id}>
                 {v.label} - {formatDate(v.createdAt)}
@@ -103,6 +111,7 @@ export default function OutcomeTracker({ outcomes, versions, onAdd, onDelete }: 
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="What happened? What worked? What didn't? (optional)"
+            aria-label="Call outcome notes"
             className="w-full h-20 bg-background border border-border rounded-lg p-3 text-sm text-text-primary placeholder:text-text-muted resize-none focus:outline-none focus:border-primary/30"
           />
 
@@ -151,7 +160,8 @@ export default function OutcomeTracker({ outcomes, versions, onAdd, onDelete }: 
                 <span className="text-xs text-text-muted">{formatDate(outcome.date)}</span>
                 <button
                   onClick={() => onDelete(outcome.id)}
-                  className="p-1 rounded hover:bg-danger/10 text-text-muted hover:text-danger transition-colors"
+                  className="p-2 rounded hover:bg-danger/10 text-text-muted hover:text-danger transition-colors"
+                  aria-label="Delete outcome"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>

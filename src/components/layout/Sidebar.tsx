@@ -1,23 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
-  FileText,
   Plus,
   Settings,
   Menu,
   X,
   ChevronRight,
   Sparkles,
+  Brain,
+  Target,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/interview", label: "Seed the Brain", icon: Brain },
   { href: "/", label: "New Script", icon: Plus },
+  { href: "/leads", label: "Leads", icon: Target },
 ];
 
 const bottomItems = [
@@ -28,6 +31,17 @@ export default function Sidebar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
+
+  // Close on Escape key
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    if (open) {
+      window.addEventListener("keydown", handler);
+      return () => window.removeEventListener("keydown", handler);
+    }
+  }, [open]);
 
   return (
     <>
@@ -45,11 +59,16 @@ export default function Sidebar() {
         <div
           className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden"
           onClick={close}
+          aria-label="Close navigation menu"
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === "Enter" && close()}
         />
       )}
 
       {/* Sidebar */}
       <aside
+        aria-label="Main navigation"
         className={cn(
           "fixed left-0 top-0 bottom-0 z-40 bg-surface border-r border-border flex flex-col w-56",
           "transition-transform duration-300 lg:translate-x-0",
@@ -69,7 +88,7 @@ export default function Sidebar() {
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
-            const isActive = pathname === "/" && item.href === "/";
+            const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
             return (
               <Link
                 key={item.href}

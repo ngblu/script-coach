@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -40,15 +40,17 @@ function ScriptDetailInner({
   const router = useRouter();
 
   // Resolve params
-  useState(() => {
+  useEffect(() => {
     paramsPromise.then(setResolvedParams);
-  });
+  }, [paramsPromise]);
 
   const script = resolvedParams ? useScript(resolvedParams.id) : undefined;
 
   const handleSave = useCallback(
     (content: string) => {
-      if (!script) return;
+      if (!script || !content.trim()) return;
+      // Don't create a version if content hasn't changed from current
+      if (content === script.content && script.versions.length > 0) return;
       const version: ScriptVersion = {
         id: generateId(),
         content,
@@ -83,7 +85,7 @@ function ScriptDetailInner({
     } finally {
       setAnalyzing(false);
     }
-  }, [script]);
+  }, [script, model]);
 
   const handleAddOutcome = useCallback(
     (outcome: Outcome) => {
@@ -141,6 +143,7 @@ function ScriptDetailInner({
         <button
           onClick={() => router.push("/")}
           className="p-2 rounded-lg hover:bg-surface-hover text-text-secondary hover:text-text-primary transition-colors"
+          aria-label="Back to Dashboard"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>

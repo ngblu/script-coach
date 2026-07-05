@@ -54,6 +54,7 @@ export default function ScriptEditor({ content: initialContent, onSave }: Script
       <textarea
         value={content}
         onChange={(e) => setContent(e.target.value)}
+        aria-label="Sales script content editor"
         placeholder={`Paste or write your sales script here...
 
 Example structure:

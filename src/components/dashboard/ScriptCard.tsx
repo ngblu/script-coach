@@ -66,7 +66,7 @@ export default function ScriptCard({ script, onDelete }: ScriptCardProps) {
               e.stopPropagation();
               onDelete();
             }}
-            className="p-2 rounded-lg hover:bg-danger/10 text-text-muted hover:text-danger transition-colors"
+            className="p-2.5 rounded-lg hover:bg-danger/10 text-text-muted hover:text-danger transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
             aria-label="Delete script"
           >
             <Trash2 className="w-4 h-4" />

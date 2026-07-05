@@ -43,26 +43,33 @@ async function callAnthropic(systemPrompt: string, prompt: string) {
 }
 
 async function callHermesDirect(model: string, prompt: string, systemPrompt: string) {
-  const res = await fetch(HERMES_API, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${API_SERVER_KEY}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: prompt },
-      ],
-      temperature: 0.7,
-      max_tokens: 4000,
-      stream: false,
-    }),
-  });
-  if (!res.ok) throw new Error(`Hermes API error: ${res.status}`);
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content || "";
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
+  try {
+    const res = await fetch(HERMES_API, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${API_SERVER_KEY}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.7,
+        max_tokens: 4000,
+        stream: false,
+      }),
+      signal: controller.signal,
+    });
+    if (!res.ok) throw new Error(`Hermes API error: ${res.status}`);
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content || "";
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 async function callHermesRelay(model: string, prompt: string, systemPrompt: string) {

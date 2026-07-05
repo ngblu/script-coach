@@ -42,3 +42,17 @@ export interface Script {
   outcomes: Outcome[];
   tags: string[];
 }
+
+export interface Lead {
+  id: string;
+  businessName: string;
+  website: string;
+  phone: string;
+  industry: string;
+  auditScore: number;
+  talkingPoints: string[];
+  pitch: string;
+  status: "new" | "contacted" | "qualified" | "closed";
+  notes: string;
+  createdAt: string;
+}

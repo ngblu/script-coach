@@ -22,13 +22,17 @@ function saveScripts(scripts: Script[]) {
 
 let globalScripts: Script[] = [];
 let listeners: (() => void)[] = [];
+let initialized = false;
 
 function notify() {
   listeners.forEach((fn) => fn());
 }
 
 export function getScripts(): Script[] {
-  if (globalScripts.length === 0) globalScripts = loadScripts();
+  if (!initialized) {
+    globalScripts = loadScripts();
+    initialized = true;
+  }
   return globalScripts;
 }
 

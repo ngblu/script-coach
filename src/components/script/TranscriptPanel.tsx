@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Mic, Sparkles, TrendingUp, AlertCircle, Lightbulb } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
@@ -26,9 +26,14 @@ export default function TranscriptPanel({ scriptContent, scriptTitle }: Transcri
   const [transcript, setTranscript] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [analyses, setAnalyses] = useState<TranscriptAnalysis[]>([]);
+  const analyzingRef = useRef(false);
+
+  useEffect(() => {
+    analyzingRef.current = analyzing;
+  }, [analyzing]);
 
   const handleAnalyze = async () => {
-    if (!transcript.trim()) return;
+    if (!transcript.trim() || analyzingRef.current) return;
     setAnalyzing(true);
     try {
       const res = await fetch("/api/analyze-transcript", {
@@ -63,6 +68,7 @@ export default function TranscriptPanel({ scriptContent, scriptTitle }: Transcri
         <textarea
           value={transcript}
           onChange={(e) => setTranscript(e.target.value)}
+          aria-label="Paste call transcript"
           placeholder={`Paste your call transcript here...
 
 Example:

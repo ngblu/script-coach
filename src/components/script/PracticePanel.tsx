@@ -35,12 +35,19 @@ export default function PracticePanel({ scriptContent, scriptTitle }: PracticePa
   const [industry, setIndustry] = useState("local services");
   const [started, setStarted] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const thinkingRef = useRef(false); // Ref-based guard for concurrent calls
+
+  // Keep ref in sync with thinking state
+  useEffect(() => {
+    thinkingRef.current = thinking;
+  }, [thinking]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const handleStart = async () => {
+    if (thinkingRef.current) return; // Prevent concurrent starts
     setStarted(true);
     setMessages([]);
     setGrade(null);
@@ -71,22 +78,23 @@ export default function PracticePanel({ scriptContent, scriptTitle }: PracticePa
   };
 
   const handleSend = async () => {
-    if (!input.trim() || thinking) return;
+    if (!input.trim() || thinkingRef.current) return;
     const repMsg = input.trim();
     setInput("");
-    const updated = [...messages, { role: "rep" as const, content: repMsg }];
-    setMessages(updated);
     setThinking(true);
-
+    // Use functional updater to get the latest messages, avoiding stale closure
+    setMessages((prev) => [...prev, { role: "rep" as const, content: repMsg }]);
+    // Build the full message list for the API call
+    const updatedMessages = [...messages, { role: "rep" as const, content: repMsg }];
     try {
       const res = await fetch("/api/practice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ script: scriptContent, industry, messages: updated }),
+        body: JSON.stringify({ script: scriptContent, industry, messages: updatedMessages }),
       });
       const data = await res.json();
       if (data.type === "response") {
-        setMessages([...updated, { role: "prospect", content: data.content }]);
+        setMessages((prev) => [...prev, { role: "prospect", content: data.content }]);
       }
     } catch {
       alert("Practice API error");
@@ -96,7 +104,7 @@ export default function PracticePanel({ scriptContent, scriptTitle }: PracticePa
   };
 
   const handleGrade = async () => {
-    if (messages.length < 4) return;
+    if (messages.length < 4 || thinkingRef.current) return;
     setThinking(true);
     try {
       const res = await fetch("/api/practice", {
@@ -221,6 +229,7 @@ export default function PracticePanel({ scriptContent, scriptTitle }: PracticePa
                 onKeyDown={(e) => e.key === "Enter" && handleSend()}
                 placeholder={grade ? "Session graded. Reset to try again." : "Type your response..."}
                 disabled={!!grade || thinking}
+                aria-label="Type your sales response"
                 className="flex-1 px-4 py-2 bg-background border border-border rounded-lg text-sm text-text-primary placeholder:text-text-muted disabled:opacity-40 focus:outline-none focus:border-accent/30"
               />
               {!grade && (
@@ -229,6 +238,7 @@ export default function PracticePanel({ scriptContent, scriptTitle }: PracticePa
                     onClick={handleSend}
                     disabled={!input.trim() || thinking}
                     className="px-3 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 disabled:opacity-40 transition-colors"
+                    aria-label="Send message"
                   >
                     <Send className="w-4 h-4" />
                   </button>
@@ -237,6 +247,7 @@ export default function PracticePanel({ scriptContent, scriptTitle }: PracticePa
                     disabled={messages.length < 4 || thinking}
                     className="px-3 py-2 bg-surface border border-success/30 text-success rounded-lg hover:bg-success/10 disabled:opacity-40 transition-colors"
                     title="End call and get graded"
+                    aria-label="End call and get grade"
                   >
                     <Trophy className="w-4 h-4" />
                   </button>
@@ -246,6 +257,7 @@ export default function PracticePanel({ scriptContent, scriptTitle }: PracticePa
                 onClick={handleReset}
                 className="px-3 py-2 bg-surface border border-border text-text-muted rounded-lg hover:text-text-secondary transition-colors"
                 title="Reset"
+                aria-label="Reset practice session"
               >
                 <RotateCcw className="w-4 h-4" />
               </button>

@@ -11,6 +11,15 @@ interface VersionHistoryProps {
 export default function VersionHistory({ versions }: VersionHistoryProps) {
   const reversed = [...versions].reverse();
 
+  if (versions.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <GitBranch className="w-10 h-10 text-text-muted mx-auto mb-3" />
+        <p className="text-text-secondary text-sm">No versions yet. Save your script to create one.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {reversed.map((version, i) => (
@@ -40,13 +49,6 @@ export default function VersionHistory({ versions }: VersionHistoryProps) {
           </pre>
         </div>
       ))}
-
-      {versions.length === 0 && (
-        <div className="text-center py-12">
-          <GitBranch className="w-10 h-10 text-text-muted mx-auto mb-3" />
-          <p className="text-text-secondary text-sm">No versions yet. Save your script to create one.</p>
-        </div>
-      )}
     </div>
   );
 }

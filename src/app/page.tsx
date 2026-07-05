@@ -120,6 +120,7 @@ function DashboardInner() {
   const analyzedCount = scripts.filter((s) => s.analyses.length > 0).length;
 
   const handleCreate = () => {
+    if (loadingSamples) return; // Guard against rapid clicks
     const title = newTitle.trim() || "Untitled Script";
     const id = generateId();
     const now = new Date().toISOString();
@@ -139,6 +140,7 @@ function DashboardInner() {
   };
 
   const handleLoadSamples = () => {
+    if (loadingSamples) return; // Guard against rapid clicks
     setLoadingSamples(true);
     SAMPLE_SCRIPTS.forEach((s) => {
       const id = generateId();
@@ -206,7 +208,7 @@ function DashboardInner() {
       {/* New script modal */}
       {showNew && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={() => setShowNew(false)} />
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={() => setShowNew(false)} aria-label="Close modal" role="button" tabIndex={0} onKeyDown={(e) => e.key === "Enter" && setShowNew(false)} />
           <div className="relative bg-surface border border-border rounded-xl p-6 w-full max-w-md animate-scale-in">
             <h2 className="text-lg font-semibold mb-4">New Sales Script</h2>
             <input
@@ -214,6 +216,7 @@ function DashboardInner() {
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
               placeholder="Script name (e.g., Cold Call - Plumbers)"
+              aria-label="Script name"
               className="w-full px-4 py-2.5 bg-background border border-border rounded-lg text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-primary/50 mb-4"
               autoFocus
               onKeyDown={(e) => e.key === "Enter" && handleCreate()}

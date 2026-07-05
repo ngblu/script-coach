@@ -12,6 +12,7 @@ export default function SettingsPage() {
         <button
           onClick={() => router.push("/")}
           className="p-2 rounded-lg hover:bg-surface-hover text-text-secondary hover:text-text-primary transition-colors"
+          aria-label="Back to Dashboard"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
