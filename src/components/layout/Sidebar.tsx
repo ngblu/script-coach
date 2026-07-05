@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/?new=true", label: "New Script", icon: Plus },
+  { href: "/", label: "New Script", icon: Plus },
 ];
 
 const bottomItems = [
