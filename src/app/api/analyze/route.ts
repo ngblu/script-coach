@@ -1,12 +1,46 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// Hermes API server (OpenAI-compatible) - used when running locally
+// Anthropic API - used for Claude Opus
+const ANTHROPIC_API = "https://api.anthropic.com/v1/messages";
+
+// Hermes API server (OpenAI-compatible) - used for DeepSeek locally
 const HERMES_API = "http://127.0.0.1:8642/v1/chat/completions";
 
-// Dashboard bridge - used when deployed on Vercel (cloud relay)
+// Dashboard bridge - used for DeepSeek on Vercel (cloud relay)
 const DASHBOARD_BRIDGE = "https://555-dashboard.vercel.app/api/bridge";
 
 const API_SERVER_KEY = process.env["NEXT_PUBLIC" + "_HERMES_API_KEY"] || process.env["API_" + "SERVER_KEY"] || "";
+
+async function callAnthropic(systemPrompt: string, prompt: string) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
+
+  const res = await fetch(ANTHROPIC_API, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: "claude-opus-4-20250514",
+      max_tokens: 4000,
+      system: systemPrompt,
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.7,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Anthropic API error ${res.status}: ${err}`);
+  }
+
+  const data = await res.json();
+  // Anthropic returns content as array of text blocks
+  const textBlocks = data.content?.filter((b: any) => b.type === "text") || [];
+  return textBlocks.map((b: any) => b.text).join("\n") || "";
+}
 
 async function callHermesDirect(model: string, prompt: string, systemPrompt: string) {
   const res = await fetch(HERMES_API, {
@@ -33,9 +67,7 @@ async function callHermesDirect(model: string, prompt: string, systemPrompt: str
 
 async function callHermesRelay(model: string, prompt: string, systemPrompt: string) {
   const fullPrompt = `${systemPrompt}\n\n${prompt}`;
-  const modelLabel = model.includes("opus") ? "Claude Opus" : model.includes("deepseek") ? "DeepSeek" : "Hermes";
 
-  // Send command to bridge
   const sendRes = await fetch(DASHBOARD_BRIDGE, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -50,7 +82,6 @@ async function callHermesRelay(model: string, prompt: string, systemPrompt: stri
   const { commandId } = await sendRes.json();
   if (!commandId) throw new Error("No commandId from bridge");
 
-  // Poll for result (up to 90s)
   for (let i = 0; i < 45; i++) {
     await new Promise((r) => setTimeout(r, 2000));
     const pollRes = await fetch(`${DASHBOARD_BRIDGE}?cmdId=${commandId}`);
@@ -73,6 +104,7 @@ export async function POST(req: NextRequest) {
     }
 
     const model = requestedModel || "deepseek/deepseek-chat";
+    const isOpus = model.includes("opus") || model.includes("claude");
 
     const systemPrompt = "You are an expert sales script coach. Return only valid JSON, no markdown wrapping, no code fences.";
 
@@ -110,22 +142,27 @@ ${script}`;
 
     let rawContent: string;
 
-    // Try direct Hermes API first (works locally), fall back to relay (works on Vercel)
-    try {
-      rawContent = await callHermesDirect(model, prompt, systemPrompt);
-    } catch {
+    if (isOpus) {
+      // Claude Opus → Anthropic API directly
+      rawContent = await callAnthropic(systemPrompt, prompt);
+    } else {
+      // DeepSeek → Hermes bridge (direct or relay)
       try {
-        rawContent = await callHermesRelay(model, prompt, systemPrompt);
-      } catch (relayErr: any) {
-        return NextResponse.json(
-          { error: `Hermes bridge unavailable. Is the bridge poller running? (${relayErr.message})` },
-          { status: 503 }
-        );
+        rawContent = await callHermesDirect(model, prompt, systemPrompt);
+      } catch {
+        try {
+          rawContent = await callHermesRelay(model, prompt, systemPrompt);
+        } catch (relayErr: any) {
+          return NextResponse.json(
+            { error: `Hermes bridge unavailable. Is the bridge poller running? (${relayErr.message})` },
+            { status: 503 }
+          );
+        }
       }
     }
 
     if (!rawContent || !rawContent.trim()) {
-      return NextResponse.json({ error: "Empty response from Hermes" }, { status: 500 });
+      return NextResponse.json({ error: "Empty response from AI" }, { status: 500 });
     }
 
     // Clean markdown code fences
