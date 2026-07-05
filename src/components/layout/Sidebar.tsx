@@ -76,13 +76,16 @@ export default function Sidebar() {
         )}
       >
         {/* Logo */}
-        <div className="flex items-center gap-2.5 px-5 py-5 border-b border-border">
-          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Sparkles className="w-4 h-4 text-primary" />
+        <div className="flex flex-col px-5 py-4 border-b border-border">
+          <div className="flex items-center gap-2">
+            <svg width="28" height="28" viewBox="0 0 28 28" className="shrink-0">
+              <text x="0" y="22" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="26" fontStyle="italic" fill="#00A8E8" letterSpacing="-1">555</text>
+            </svg>
+            <span className="font-bold text-sm tracking-tight text-white leading-none">DIGITAL</span>
           </div>
-          <span className="font-semibold text-sm tracking-tight text-text-primary">
-            Script Coach
-          </span>
+          <p className="text-[9px] text-text-muted mt-1.5 leading-tight">
+            WEBSITES THAT <span className="text-[#00A8E8] font-medium">GET YOU</span> MORE BUSINESS
+          </p>
         </div>
 
         {/* Nav */}
