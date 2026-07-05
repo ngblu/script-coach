@@ -18,6 +18,7 @@ import AnalysisPanel from "@/components/script/AnalysisPanel";
 import VersionHistory from "@/components/script/VersionHistory";
 import OutcomeTracker from "@/components/script/OutcomeTracker";
 import TranscriptPanel from "@/components/script/TranscriptPanel";
+import PracticePanel from "@/components/script/PracticePanel";
 
 export default function ScriptDetailPage({
   params,
@@ -33,7 +34,7 @@ function ScriptDetailInner({
   params: Promise<{ id: string }>;
 }) {
   const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null);
-  const [activeTab, setActiveTab] = useState<"edit" | "analysis" | "versions" | "outcomes" | "transcripts">("edit");
+  const [activeTab, setActiveTab] = useState<"edit" | "analysis" | "versions" | "outcomes" | "transcripts" | "practice">("edit");
   const [analyzing, setAnalyzing] = useState(false);
   const [model, setModel] = useState<"deepseek/deepseek-chat" | "anthropic/claude-opus-4">("deepseek/deepseek-chat");
   const router = useRouter();
@@ -130,6 +131,7 @@ function ScriptDetailInner({
     { key: "versions" as const, label: "Versions", badge: script.versions.length },
     { key: "outcomes" as const, label: "Outcomes", badge: script.outcomes.length },
     { key: "transcripts" as const, label: "Transcripts" },
+    { key: "practice" as const, label: "Practice", badge: undefined },
   ];
 
   return (
@@ -237,6 +239,9 @@ function ScriptDetailInner({
       )}
       {activeTab === "transcripts" && (
         <TranscriptPanel scriptContent={script.content} scriptTitle={script.title} />
+      )}
+      {activeTab === "practice" && (
+        <PracticePanel scriptContent={script.content} scriptTitle={script.title} />
       )}
     </div>
   );
