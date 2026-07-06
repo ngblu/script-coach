@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -21,31 +21,21 @@ import TranscriptPanel from "@/components/script/TranscriptPanel";
 import PracticePanel from "@/components/script/PracticePanel";
 import { buildFullBrainContext } from "@/lib/brains/context";
 
-export default function ScriptDetailPage({
+export default async function ScriptDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  return <ScriptDetailInner params={params} />;
+  const { id } = await params;
+  return <ScriptDetailInner id={id} />;
 }
 
-function ScriptDetailInner({
-  params: paramsPromise,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null);
+function ScriptDetailInner({ id }: { id: string }) {
   const [activeTab, setActiveTab] = useState<"edit" | "analysis" | "versions" | "outcomes" | "transcripts" | "practice">("edit");
   const [analyzing, setAnalyzing] = useState(false);
   const [model, setModel] = useState<"deepseek/deepseek-chat" | "anthropic/claude-opus-4">("deepseek/deepseek-chat");
   const router = useRouter();
-
-  // Resolve params
-  useEffect(() => {
-    paramsPromise.then(setResolvedParams);
-  }, [paramsPromise]);
-
-  const script = resolvedParams ? useScript(resolvedParams.id) : undefined;
+  const script = useScript(id);
 
   const handleSave = useCallback(
     (content: string) => {
