@@ -19,6 +19,11 @@ import {
 import { useLeads, addLead, deleteLead, updateLead } from "@/lib/leadsStore";
 import type { Lead } from "@/lib/types";
 import { cn, generateId, formatDate } from "@/lib/utils";
+import { getLeadIntel, upsertLeadIntel, useLeadsBrain } from "@/lib/brains/store";
+import { buildFullBrainContext } from "@/lib/brains/context";
+import PersonalizedScript from "@/components/leads/PersonalizedScript";
+import { useRouter } from "next/navigation";
+import { FileText } from "lucide-react";
 
 const INDUSTRIES = [
   "Plumbing",
@@ -119,6 +124,8 @@ function generateTalkingPoints(lead: { businessName: string; industry: string; w
 
 export default function LeadsPage() {
   const leads = useLeads();
+  const leadsBrain = useLeadsBrain();
+  const router = useRouter();
   const [showImport, setShowImport] = useState(false);
   const [csvText, setCsvText] = useState("");
   const [manualBusinessName, setManualBusinessName] = useState("");
@@ -128,7 +135,54 @@ export default function LeadsPage() {
   const [importError, setImportError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [generatingFor, setGeneratingFor] = useState<string | null>(null);
+  const [generatingScriptFor, setGeneratingScriptFor] = useState<string | null>(null);
+  const [scriptError, setScriptError] = useState<string | null>(null);
   const [expandedLead, setExpandedLead] = useState<string | null>(null);
+
+  const handleGenerateScript = async (lead: Lead) => {
+    setGeneratingScriptFor(lead.id);
+    setScriptError(null);
+    try {
+      const res = await fetch("/api/leads/generate-script", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lead: {
+            id: lead.id,
+            businessName: lead.businessName,
+            industry: lead.industry,
+            website: lead.website,
+            auditScore: lead.auditScore,
+            talkingPoints: lead.talkingPoints,
+            notes: lead.notes,
+          },
+          brainContext: buildFullBrainContext(lead.id),
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `Script generation failed (${res.status})`);
+      }
+      const data = await res.json();
+      const existing = getLeadIntel(lead.id);
+      const now = new Date().toISOString();
+      upsertLeadIntel({
+        id: existing?.id || generateId(),
+        leadId: lead.id,
+        personalizedScript: data.script,
+        preQualBackground: data.preQualBackground || existing?.preQualBackground || "",
+        talkingPoints: existing?.talkingPoints || [],
+        objections: existing?.objections || [],
+        callHistory: existing?.callHistory || [],
+        createdAt: existing?.createdAt || now,
+        updatedAt: now,
+      });
+    } catch (err) {
+      setScriptError(err instanceof Error ? err.message : "Script generation failed");
+    } finally {
+      setGeneratingScriptFor(null);
+    }
+  };
 
   const filteredLeads = useMemo(() => {
     if (!searchQuery.trim()) return leads;
@@ -185,6 +239,19 @@ export default function LeadsPage() {
         createdAt: new Date().toISOString(),
       };
       addLead(lead);
+      // Seed the Leads Brain with a pre-qual background for this lead
+      const now = new Date().toISOString();
+      upsertLeadIntel({
+        id: generateId(),
+        leadId: lead.id,
+        personalizedScript: "",
+        preQualBackground: `${businessName} is a ${industry || "local service"} business${website ? ` with a website at ${website}` : " with no website found"}. Audit score: ${lead.auditScore}/100. ${lead.auditScore < 60 ? "Weak online presence — strong redesign candidate." : lead.auditScore < 80 ? "Average site — improvement opportunity." : "Decent site — lead with SEO/maintenance angle."}`,
+        talkingPoints: lead.talkingPoints,
+        objections: [],
+        callHistory: [],
+        createdAt: now,
+        updatedAt: now,
+      });
       imported++;
     }
 
@@ -569,15 +636,51 @@ export default function LeadsPage() {
                       />
                     </div>
 
+                    {/* Personalized Script */}
+                    {(() => {
+                      const intel = leadsBrain.intel.find((i) => i.leadId === lead.id);
+                      if (!intel?.personalizedScript) return null;
+                      return (
+                        <PersonalizedScript
+                          script={intel.personalizedScript}
+                          onPractice={() => router.push(`/practice?leadId=${lead.id}`)}
+                        />
+                      );
+                    })()}
+
+                    {scriptError && generatingScriptFor === null && expandedLead === lead.id && (
+                      <p className="text-xs text-red-400">{scriptError}</p>
+                    )}
+
                     {/* Actions */}
                     <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleGenerateScript(lead);
+                        }}
+                        disabled={generatingScriptFor === lead.id}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 min-h-[40px] bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+                      >
+                        {generatingScriptFor === lead.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <FileText className="w-3.5 h-3.5" />
+                        )}
+                        {generatingScriptFor === lead.id
+                          ? "Writing script..."
+                          : leadsBrain.intel.find((i) => i.leadId === lead.id)?.personalizedScript
+                            ? "Regenerate Script"
+                            : "Generate Script"}
+                      </button>
+
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           handleGeneratePitch(lead);
                         }}
                         disabled={generatingFor === lead.id}
-                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-accent text-white rounded-lg text-xs font-medium hover:bg-accent/90 transition-colors disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 px-3 py-2 min-h-[40px] bg-accent text-white rounded-lg text-xs font-medium hover:bg-accent/90 transition-colors disabled:opacity-50"
                       >
                         {generatingFor === lead.id ? (
                           <Loader2 className="w-3.5 h-3.5 animate-spin" />

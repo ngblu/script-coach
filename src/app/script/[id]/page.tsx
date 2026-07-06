@@ -19,6 +19,7 @@ import VersionHistory from "@/components/script/VersionHistory";
 import OutcomeTracker from "@/components/script/OutcomeTracker";
 import TranscriptPanel from "@/components/script/TranscriptPanel";
 import PracticePanel from "@/components/script/PracticePanel";
+import { buildFullBrainContext } from "@/lib/brains/context";
 
 export default function ScriptDetailPage({
   params,
@@ -72,7 +73,12 @@ function ScriptDetailInner({
       const res = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ script: script.content, title: script.title, model }),
+        body: JSON.stringify({
+          script: script.content,
+          title: script.title,
+          model,
+          brainContext: buildFullBrainContext(),
+        }),
       });
       if (!res.ok) throw new Error("Analysis failed");
       const analysis: AnalysisResult = await res.json();

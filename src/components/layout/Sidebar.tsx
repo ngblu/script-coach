@@ -10,17 +10,63 @@ import {
   Menu,
   X,
   ChevronRight,
-  Sparkles,
   Brain,
   Target,
+  Layers,
+  Upload,
+  Phone,
+  Swords,
+  LayoutGrid,
+  BookOpen,
+  TrendingUp,
+  Scale,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/interview", label: "Seed the Brain", icon: Brain },
-  { href: "/", label: "New Script", icon: Plus },
-  { href: "/leads", label: "Leads", icon: Target },
+interface NavItem {
+  href: string;
+  label: string;
+  icon: React.ElementType;
+}
+
+interface NavSection {
+  header: string | null;
+  items: NavItem[];
+}
+
+const navSections: NavSection[] = [
+  {
+    header: null,
+    items: [
+      { href: "/", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/leads", label: "Leads", icon: Target },
+    ],
+  },
+  {
+    header: "INTELLIGENCE",
+    items: [
+      { href: "/brains", label: "Brains", icon: Brain },
+      { href: "/verticals", label: "Verticals", icon: Layers },
+      { href: "/ingest", label: "Feed the Brains", icon: Upload },
+      { href: "/interview", label: "Seed the Brain", icon: Plus },
+    ],
+  },
+  {
+    header: "EXECUTION",
+    items: [
+      { href: "/live", label: "Live Coach", icon: Phone },
+      { href: "/practice", label: "Practice", icon: Swords },
+      { href: "/playbooks", label: "Playbooks", icon: BookOpen },
+      { href: "/coaching-cards", label: "Coaching Cards", icon: LayoutGrid },
+    ],
+  },
+  {
+    header: "ANALYSIS",
+    items: [
+      { href: "/analytics", label: "Analytics", icon: TrendingUp },
+      { href: "/compliance", label: "Compliance", icon: Scale },
+    ],
+  },
 ];
 
 const bottomItems = [
@@ -89,29 +135,39 @@ export default function Sidebar() {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={close}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 group",
-                  isActive
-                    ? "bg-primary/10 text-primary border border-primary/20"
-                    : "text-text-secondary hover:text-text-primary hover:bg-surface-hover border border-transparent"
-                )}
-              >
-                <item.icon className="w-4 h-4" />
-                <span>{item.label}</span>
-                {isActive && (
-                  <ChevronRight className="w-3 h-3 ml-auto opacity-60" />
-                )}
-              </Link>
-            );
-          })}
+        <nav className="flex-1 px-3 py-4 space-y-4 overflow-y-auto">
+          {navSections.map((section, si) => (
+            <div key={si} className="space-y-1">
+              {section.header && (
+                <p className="px-3 pt-1 pb-0.5 text-[9px] font-bold text-text-muted tracking-widest">
+                  {section.header}
+                </p>
+              )}
+              {section.items.map((item) => {
+                const isActive =
+                  pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={close}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 group",
+                      isActive
+                        ? "bg-primary/10 text-primary border border-primary/20"
+                        : "text-text-secondary hover:text-text-primary hover:bg-surface-hover border border-transparent"
+                    )}
+                  >
+                    <item.icon className="w-4 h-4" />
+                    <span>{item.label}</span>
+                    {isActive && (
+                      <ChevronRight className="w-3 h-3 ml-auto opacity-60" />
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
         {/* Bottom nav */}

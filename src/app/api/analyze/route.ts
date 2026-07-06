@@ -104,7 +104,7 @@ async function callHermesRelay(model: string, prompt: string, systemPrompt: stri
 
 export async function POST(req: NextRequest) {
   try {
-    const { script, title, model: requestedModel } = await req.json();
+    const { script, title, model: requestedModel, brainContext } = await req.json();
 
     if (!script || !script.trim()) {
       return NextResponse.json({ error: "No script provided" }, { status: 400 });
@@ -115,7 +115,12 @@ export async function POST(req: NextRequest) {
 
     const systemPrompt = "You are an expert sales script coach. Return only valid JSON, no markdown wrapping, no code fences.";
 
-    const prompt = `Analyze the following sales script and provide a detailed, actionable analysis.
+    const contextBlock =
+      brainContext && typeof brainContext === "string" && brainContext.trim()
+        ? `\n\nBUSINESS INTELLIGENCE CONTEXT (from Noah's Market Brain, Leads Brain, and Coaching Brain — use this to make the analysis specific to HIS business, not generic advice):\n${brainContext.slice(0, 12000)}\n\n---\n`
+        : "";
+
+    const prompt = `Analyze the following sales script and provide a detailed, actionable analysis.${contextBlock}
 
 Return ONLY valid JSON with this exact structure (no markdown, no code fences):
 

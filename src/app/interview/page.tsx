@@ -20,6 +20,7 @@ import {
   deleteKnowledgeBase,
   type KnowledgeBase,
 } from "@/lib/knowledge-base";
+import { ingestInterview } from "@/lib/brains/knowledge-ingestion";
 
 interface Message {
   role: "ai" | "noah";
@@ -179,12 +180,16 @@ export default function InterviewPage() {
       setState({ ...state!, isComplete: true, readyToSummarize: false });
       saveKnowledgeBase(data.knowledgeBase);
       setKnowledgeBase(data.knowledgeBase);
+      // Also feed the interview into the three-brain system (non-blocking)
+      ingestInterview(messages).catch(() => {
+        // Brain ingestion is best-effort; KB save already succeeded
+      });
       setMessages((prev) => [
         ...prev,
         {
           role: "ai",
           content:
-            "I've built your Knowledge Base from everything you've shared. It's been saved and will now be used to make every script analysis hyper-relevant to 555 Digital. You can view it anytime below, and update it whenever you want by starting a new interview.",
+            "I've built your Knowledge Base from everything you've shared. It's been saved and distributed into your Market, Leads, and Coaching Brains — every script analysis and live call will now use it. You can view it anytime below, and update it whenever you want by starting a new interview.",
         },
       ]);
     } catch (err: any) {
