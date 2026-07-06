@@ -53,7 +53,7 @@ Return ONLY the pitch text with no additional commentary, no quotes around it, n
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-opus-4-20250514",
+        model: "claude-sonnet-4-20250514",
         max_tokens: 600,
         system: systemPrompt,
         messages: [{ role: "user", content: prompt }],

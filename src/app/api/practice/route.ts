@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
         body: JSON.stringify({
-          model: "claude-opus-4-20250514",
+          model: "claude-sonnet-4-20250514",
           max_tokens: 2000,
           system: "You are an expert sales coach. Return only valid JSON, no markdown wrapping.",
           messages: [{ role: "user", content: gradePrompt }],
@@ -72,7 +72,7 @@ The rep just said: "${messages[messages.length - 1]?.content || "Hello"}"\n\nRes
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
       body: JSON.stringify({
-        model: "claude-opus-4-20250514",
+        model: "claude-sonnet-4-20250514",
         max_tokens: 300,
         system: systemPrompt,
         messages: [{ role: "user", content: messages[messages.length - 1]?.content || "Hello" }],

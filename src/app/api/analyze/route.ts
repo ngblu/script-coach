@@ -23,7 +23,7 @@ async function callAnthropic(systemPrompt: string, prompt: string) {
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: "claude-opus-4-20250514",
+      model: "claude-sonnet-4-20250514",
       max_tokens: 4000,
       system: systemPrompt,
       messages: [{ role: "user", content: prompt }],
@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
     }
 
     const model = requestedModel || "deepseek/deepseek-chat";
-    const isOpus = model.includes("opus") || model.includes("claude");
+    const isClaude = model.includes("sonnet") || model.includes("claude");
 
     const systemPrompt = "You are an expert sales script coach. Return only valid JSON, no markdown wrapping, no code fences.";
 
@@ -154,7 +154,7 @@ ${script}`;
 
     let rawContent: string;
 
-    if (isOpus) {
+    if (isClaude) {
       // Claude Opus → Anthropic API directly
       rawContent = await callAnthropic(systemPrompt, prompt);
     } else {

@@ -29,7 +29,7 @@ export async function callAnthropic(
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: "claude-opus-4-20250514",
+      model: "claude-sonnet-4-20250514",
       max_tokens: maxTokens,
       system: systemPrompt,
       messages: [{ role: "user", content: prompt }],
@@ -128,10 +128,10 @@ export async function callAI(
   prompt: string,
   opts?: { model?: string; maxTokens?: number; temperature?: number }
 ): Promise<string> {
-  const model = opts?.model || "claude-opus-4-20250514";
-  const isOpus = model.includes("opus") || model.includes("claude");
+  const model = opts?.model || "claude-sonnet-4-20250514";
+  const isClaude = model.includes("sonnet") || model.includes("claude");
 
-  if (isOpus) {
+  if (isClaude) {
     return callAnthropic(systemPrompt, prompt, opts?.maxTokens, opts?.temperature);
   }
   try {

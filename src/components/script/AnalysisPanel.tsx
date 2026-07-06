@@ -63,7 +63,7 @@ export default function AnalysisPanel({
                 ? "bg-accent/10 text-accent border border-accent/20"
                 : "bg-primary/10 text-primary border border-primary/20"
             }`}>
-              {latest.model.includes("opus") ? "Claude Opus" : "DeepSeek"}
+              {latest.model.includes("sonnet") || latest.model.includes("claude") ? "Claude Sonnet" : "DeepSeek"}
             </span>
           )}
         </div>

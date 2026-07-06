@@ -33,7 +33,7 @@ export default async function ScriptDetailPage({
 function ScriptDetailInner({ id }: { id: string }) {
   const [activeTab, setActiveTab] = useState<"edit" | "analysis" | "versions" | "outcomes" | "transcripts" | "practice">("edit");
   const [analyzing, setAnalyzing] = useState(false);
-  const [model, setModel] = useState<"deepseek/deepseek-chat" | "anthropic/claude-opus-4">("deepseek/deepseek-chat");
+  const [model, setModel] = useState<"deepseek/deepseek-chat" | "anthropic/claude-sonnet-4">("deepseek/deepseek-chat");
   const router = useRouter();
   const script = useScript(id);
 
@@ -159,9 +159,9 @@ function ScriptDetailInner({ id }: { id: string }) {
               DeepSeek
             </button>
             <button
-              onClick={() => setModel("anthropic/claude-opus-4")}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                model === "anthropic/claude-opus-4"
+              onClick={() => setModel("anthropic/claude-sonnet-4")}
+              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                model === "anthropic/claude-sonnet-4"
                   ? "bg-accent/10 text-accent border border-accent/20"
                   : "text-text-muted hover:text-text-secondary"
               }`}

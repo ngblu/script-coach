@@ -87,7 +87,7 @@ Give Noah ONE actionable coaching tip for his next response. Return ONLY this JS
 urgency=high if the prospect is objecting or about to hang up. category matches the situation: objection (they pushed back), redirect (conversation drifting), close (buying signal detected — tell Noah to close), rapport (build connection).`;
 
     const raw = await callAI(systemPrompt, prompt, {
-      model: model || "claude-opus-4-20250514",
+      model: model || "claude-sonnet-4-20250514",
       maxTokens: 300,
       temperature: 0.5,
     });

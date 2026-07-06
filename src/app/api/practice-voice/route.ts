@@ -57,7 +57,7 @@ ${script || "No script provided"}`;
     const prompt = `Conversation so far:\n${conversationLog}\n\nThe rep just said: "${lastRepMessage}"\n\nRespond in character as the prospect. 1-2 sentences maximum, spoken words only.`;
 
     const text = await callAI(systemPrompt, prompt, {
-      model: model || "claude-opus-4-20250514",
+      model: model || "claude-sonnet-4-20250514",
       maxTokens: 200,
       temperature: 0.9,
     });

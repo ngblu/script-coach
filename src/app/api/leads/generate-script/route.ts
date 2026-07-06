@@ -66,7 +66,7 @@ A specific low-commitment ask tailored to this prospect (free audit angle usuall
 Keep the whole script tight enough to guide a 3-5 minute call. Make it sound like a human, not a telemarketer.`;
 
     const raw = await callAI(systemPrompt, prompt, {
-      model: model || "claude-opus-4-20250514",
+      model: model || "claude-sonnet-4-20250514",
       maxTokens: 2500,
       temperature: 0.7,
     });

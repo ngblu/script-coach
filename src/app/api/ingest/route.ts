@@ -72,7 +72,7 @@ CONTENT:
 ${content.slice(0, 24000)}`;
 
     const raw = await callAI(systemPrompt, prompt, {
-      model: model || "claude-opus-4-20250514",
+      model: model || "claude-sonnet-4-20250514",
       maxTokens: 3000,
       temperature: 0.4,
     });
