@@ -20,13 +20,21 @@ interface LiveCoachResponse {
   fromCardId?: string;
 }
 
+function aiError(
+  message: string,
+  retry = true,
+  suggestion = "Check your API keys in Settings or try again later."
+) {
+  return NextResponse.json({ error: message, retry, suggestion }, { status: 503 });
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body: LiveCoachRequest = await req.json();
     const { transcript, recentExchanges, context, model } = body;
 
     if (!transcript || !transcript.trim()) {
-      return NextResponse.json({ error: "No transcript provided" }, { status: 400 });
+      return NextResponse.json({ error: "No transcript provided", retry: false, suggestion: "Type what the prospect said." }, { status: 400 });
     }
 
     // First: check coaching cards for a trigger match (fast path, no AI call)
@@ -86,11 +94,15 @@ Give Noah ONE actionable coaching tip for his next response. Return ONLY this JS
 
 urgency=high if the prospect is objecting or about to hang up. category matches the situation: objection (they pushed back), redirect (conversation drifting), close (buying signal detected — tell Noah to close), rapport (build connection).`;
 
-    const raw = await callAI(systemPrompt, prompt, {
-      model: model || "claude-sonnet-4-20250514",
+    const { result: raw } = await callAI(systemPrompt, prompt, {
+      model: model || undefined,
       maxTokens: 300,
       temperature: 0.5,
     });
+
+    if (!raw) {
+      return aiError("AI coaching unavailable. All providers may be down.", true);
+    }
 
     const parsed = parseAIJson<LiveCoachResponse>(raw);
     const response: LiveCoachResponse = {
@@ -105,6 +117,6 @@ urgency=high if the prospect is objecting or about to hang up. category matches 
   } catch (err) {
     const message = err instanceof Error ? err.message : "Live coach failed";
     console.error("Live coach error:", err);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return aiError(message, true);
   }
 }

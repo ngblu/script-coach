@@ -19,6 +19,14 @@ interface ExtractedKnowledge {
   summary: string;
 }
 
+function aiError(
+  message: string,
+  retry = true,
+  suggestion = "Check your API keys in Settings or try again later."
+) {
+  return NextResponse.json({ error: message, retry, suggestion }, { status: 503 });
+}
+
 const TYPE_HINTS: Record<IngestRequest["type"], string> = {
   transcript:
     "This is a sales call or conversation transcript. Pay attention to objections raised, what worked, what didn't, and any market/competitor mentions.",
@@ -35,10 +43,10 @@ export async function POST(req: NextRequest) {
     const { type, content, fileName, model } = body;
 
     if (!content || !content.trim()) {
-      return NextResponse.json({ error: "No content provided" }, { status: 400 });
+      return NextResponse.json({ error: "No content provided", retry: false, suggestion: "Paste or upload some content to analyze." }, { status: 400 });
     }
     if (!type || !TYPE_HINTS[type]) {
-      return NextResponse.json({ error: "Invalid or missing type" }, { status: 400 });
+      return NextResponse.json({ error: "Invalid or missing type", retry: false, suggestion: "Select a content type (Document, Transcript, or Call)." }, { status: 400 });
     }
 
     const systemPrompt =
@@ -71,14 +79,14 @@ RULES:
 CONTENT:
 ${content.slice(0, 24000)}`;
 
-    const raw = await callAI(systemPrompt, prompt, {
-      model: model || "claude-sonnet-4-20250514",
+    const { result: raw, model_used, attempt_number } = await callAI(systemPrompt, prompt, {
+      model: model || undefined,
       maxTokens: 3000,
       temperature: 0.4,
     });
 
     if (!raw || !raw.trim()) {
-      return NextResponse.json({ error: "Empty response from AI" }, { status: 500 });
+      return aiError("AI returned an empty response. All providers may be unavailable.", true);
     }
 
     const extracted = parseAIJson<ExtractedKnowledge>(raw);
@@ -95,10 +103,10 @@ ${content.slice(0, 24000)}`;
       summary: extracted.summary || "",
     };
 
-    return NextResponse.json(result);
+    return NextResponse.json({ ...result, model_used, attempt_number });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Ingestion failed";
     console.error("Ingest error:", err);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return aiError(message, true);
   }
 }

@@ -15,13 +15,21 @@ interface GenerateScriptRequest {
   model?: string;
 }
 
+function aiError(
+  message: string,
+  retry = true,
+  suggestion = "Check your API keys in Settings or try again later."
+) {
+  return NextResponse.json({ error: message, retry, suggestion }, { status: 503 });
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body: GenerateScriptRequest = await req.json();
     const { lead, brainContext, model } = body;
 
     if (!lead || !lead.businessName) {
-      return NextResponse.json({ error: "No lead provided" }, { status: 400 });
+      return NextResponse.json({ error: "No lead provided", retry: false, suggestion: "Select a lead to generate a script for." }, { status: 400 });
     }
 
     const systemPrompt =
@@ -65,14 +73,14 @@ A specific low-commitment ask tailored to this prospect (free audit angle usuall
 
 Keep the whole script tight enough to guide a 3-5 minute call. Make it sound like a human, not a telemarketer.`;
 
-    const raw = await callAI(systemPrompt, prompt, {
-      model: model || "claude-sonnet-4-20250514",
+    const { result: raw, model_used, attempt_number } = await callAI(systemPrompt, prompt, {
+      model: model || undefined,
       maxTokens: 2500,
       temperature: 0.7,
     });
 
     if (!raw || !raw.trim()) {
-      return NextResponse.json({ error: "Empty response from AI" }, { status: 500 });
+      return aiError("AI returned an empty response. All providers may be unavailable.", true);
     }
 
     // Extract pre-qual background separately for the Leads Brain
@@ -80,10 +88,10 @@ Keep the whole script tight enough to guide a 3-5 minute call. Make it sound lik
     const preQualBackground = preQualMatch?.[1]?.trim() || "";
     const script = raw.trim();
 
-    return NextResponse.json({ script, preQualBackground });
+    return NextResponse.json({ script, preQualBackground, model_used, attempt_number });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Script generation failed";
     console.error("Generate script error:", err);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return aiError(message, true);
   }
 }

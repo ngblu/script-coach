@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { MessageSquare, Send, StopCircle, RotateCcw, Trophy, Sparkles, User, Bot } from "lucide-react";
+import AIErrorCard from "@/components/ui/AIErrorCard";
 
 interface PracticeMessage {
   role: "prospect" | "rep";
@@ -34,6 +35,8 @@ export default function PracticePanel({ scriptContent, scriptTitle }: PracticePa
   const [grade, setGrade] = useState<GradeResult | null>(null);
   const [industry, setIndustry] = useState("local services");
   const [started, setStarted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [errorSuggestion, setErrorSuggestion] = useState<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const thinkingRef = useRef(false); // Ref-based guard for concurrent calls
 
@@ -51,6 +54,7 @@ export default function PracticePanel({ scriptContent, scriptTitle }: PracticePa
     setStarted(true);
     setMessages([]);
     setGrade(null);
+    setError(null);
     setThinking(true);
     try {
       const res = await fetch("/api/practice", {
@@ -68,9 +72,14 @@ export default function PracticePanel({ scriptContent, scriptTitle }: PracticePa
           { role: "rep", content: "Hello, this is Noah from 555 Digital. Did I catch you at a bad time?" },
           { role: "prospect", content: data.content },
         ]);
+      } else if (data.error) {
+        setError(data.error);
+        setErrorSuggestion(data.suggestion || "Check your API keys in Settings.");
+        setStarted(false);
       }
     } catch {
-      alert("Failed to start practice. Is the API configured?");
+      setError("Failed to start practice — network error or API unavailable.");
+      setErrorSuggestion("Check your API keys in Settings or ensure the server is running.");
       setStarted(false);
     } finally {
       setThinking(false);
@@ -95,9 +104,16 @@ export default function PracticePanel({ scriptContent, scriptTitle }: PracticePa
       const data = await res.json();
       if (data.type === "response") {
         setMessages((prev) => [...prev, { role: "prospect", content: data.content }]);
+      } else if (data.error) {
+        setError(data.error);
+        setErrorSuggestion(data.suggestion || "Check your API keys in Settings.");
+        // Remove the rep message we just optimistically added
+        setMessages((prev) => prev.slice(0, -1));
       }
     } catch {
-      alert("Practice API error");
+      setError("Practice API error — network request failed.");
+      setErrorSuggestion("Check your connection and API keys in Settings.");
+      setMessages((prev) => prev.slice(0, -1));
     } finally {
       setThinking(false);
     }
@@ -115,9 +131,13 @@ export default function PracticePanel({ scriptContent, scriptTitle }: PracticePa
       const data = await res.json();
       if (data.type === "grade") {
         setGrade(data.grade);
+      } else if (data.error) {
+        setError(data.error);
+        setErrorSuggestion(data.suggestion || "Try again or check your API keys in Settings.");
       }
     } catch {
-      alert("Grading failed");
+      setError("Grading failed — network error or API unavailable.");
+      setErrorSuggestion("Check your connection and API keys in Settings.");
     } finally {
       setThinking(false);
     }
@@ -128,10 +148,24 @@ export default function PracticePanel({ scriptContent, scriptTitle }: PracticePa
     setMessages([]);
     setGrade(null);
     setInput("");
+    setError(null);
   };
 
   return (
     <div className="space-y-4">
+      {/* AI Error */}
+      {error && (
+        <AIErrorCard
+          error={error}
+          suggestion={errorSuggestion}
+          onRetry={started && messages.length >= 4 ? handleGrade : started ? () => {
+            // Retry the last action
+            if (messages.length === 0) handleStart();
+          } : handleStart}
+          onDismiss={() => setError(null)}
+        />
+      )}
+
       {!started ? (
         <div className="bg-surface border border-border rounded-xl p-6 text-center">
           <MessageSquare className="w-12 h-12 text-accent mx-auto mb-4" />

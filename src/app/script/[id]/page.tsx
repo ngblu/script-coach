@@ -1,14 +1,11 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
-  Save,
   Sparkles,
-  Plus,
-  Minus,
-  Brain,
+  ChevronDown,
 } from "lucide-react";
 import { useScript, updateScript } from "@/lib/store";
 import type { AnalysisResult, ScriptVersion, Outcome } from "@/lib/types";
@@ -19,7 +16,14 @@ import VersionHistory from "@/components/script/VersionHistory";
 import OutcomeTracker from "@/components/script/OutcomeTracker";
 import TranscriptPanel from "@/components/script/TranscriptPanel";
 import PracticePanel from "@/components/script/PracticePanel";
+import AIErrorCard from "@/components/ui/AIErrorCard";
 import { buildFullBrainContext } from "@/lib/brains/context";
+import {
+  getModels,
+  getSelectedModel,
+  setSelectedModel,
+  type ModelInfo,
+} from "@/lib/models";
 
 export default async function ScriptDetailPage({
   params,
@@ -33,9 +37,25 @@ export default async function ScriptDetailPage({
 function ScriptDetailInner({ id }: { id: string }) {
   const [activeTab, setActiveTab] = useState<"edit" | "analysis" | "versions" | "outcomes" | "transcripts" | "practice">("edit");
   const [analyzing, setAnalyzing] = useState(false);
-  const [model, setModel] = useState<"deepseek/deepseek-chat" | "anthropic/claude-sonnet-4">("deepseek/deepseek-chat");
+  const [model, setModel] = useState<string>(getSelectedModel);
+  const [error, setError] = useState<string | null>(null);
+  const [errorSuggestion, setErrorSuggestion] = useState<string>("");
   const router = useRouter();
   const script = useScript(id);
+  const models = getModels();
+
+  // Persist model choice to localStorage on every change
+  const handleModelChange = useCallback((newModel: string) => {
+    setModel(newModel);
+    setSelectedModel(newModel);
+  }, []);
+
+  // If the persisted model is no longer in the list, fall back to first available
+  useEffect(() => {
+    if (!models.some((m) => m.id === model)) {
+      setModel(models[0].id);
+    }
+  }, [models, model]);
 
   const handleSave = useCallback(
     (content: string) => {
@@ -59,6 +79,7 @@ function ScriptDetailInner({ id }: { id: string }) {
   const handleAnalyze = useCallback(async () => {
     if (!script || !script.content.trim()) return;
     setAnalyzing(true);
+    setError(null);
     try {
       const res = await fetch("/api/analyze", {
         method: "POST",
@@ -70,14 +91,20 @@ function ScriptDetailInner({ id }: { id: string }) {
           brainContext: buildFullBrainContext(),
         }),
       });
-      if (!res.ok) throw new Error("Analysis failed");
-      const analysis: AnalysisResult = await res.json();
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        setError(data.error || "Analysis failed");
+        setErrorSuggestion(data.suggestion || "Check your API keys in Settings or try again.");
+        return;
+      }
+      const analysis: AnalysisResult = data;
       updateScript(script.id, {
         analyses: [...script.analyses, analysis],
       });
       setActiveTab("analysis");
     } catch (err) {
-      alert("Analysis failed. Is the Hermes bridge running?");
+      setError("Analysis failed — network error or API unavailable.");
+      setErrorSuggestion("Check your API keys in Settings or ensure the server is running.");
     } finally {
       setAnalyzing(false);
     }
@@ -130,6 +157,19 @@ function ScriptDetailInner({ id }: { id: string }) {
 
   return (
     <div className="max-w-6xl mx-auto px-4 md:px-6 lg:px-8 py-6">
+      {/* AI Error */}
+      {error && (
+        <div className="mb-4">
+          <AIErrorCard
+            error={error}
+            suggestion={errorSuggestion}
+            onRetry={handleAnalyze}
+            retrying={analyzing}
+            onDismiss={() => setError(null)}
+          />
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <button
@@ -146,28 +186,20 @@ function ScriptDetailInner({ id }: { id: string }) {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {/* Model selector */}
-          <div className="flex items-center gap-1 bg-surface border border-border rounded-lg p-0.5">
-            <button
-              onClick={() => setModel("deepseek/deepseek-chat")}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                model === "deepseek/deepseek-chat"
-                  ? "bg-primary/10 text-primary border border-primary/20"
-                  : "text-text-muted hover:text-text-secondary"
-              }`}
+          {/* Model selector — native <select> for simplicity */}
+          <div className="relative">
+            <select
+              value={model}
+              onChange={(e) => handleModelChange(e.target.value)}
+              className="appearance-none bg-surface border border-border rounded-lg pl-3 pr-8 py-1.5 text-xs font-medium text-text-primary cursor-pointer hover:border-primary/40 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-colors"
             >
-              DeepSeek
-            </button>
-            <button
-              onClick={() => setModel("anthropic/claude-sonnet-4")}
-              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                model === "anthropic/claude-sonnet-4"
-                  ? "bg-accent/10 text-accent border border-accent/20"
-                  : "text-text-muted hover:text-text-secondary"
-              }`}
-            >
-              Opus
-            </button>
+              {models.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name} — {m.description}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted pointer-events-none" />
           </div>
 
           <button

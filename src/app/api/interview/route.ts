@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const ANTHROPIC_API = "https://api.anthropic.com/v1/messages";
+import { callAI, parseAIJson } from "@/lib/ai-server";
 
 interface ConversationMessage {
   role: "ai" | "noah";
@@ -11,6 +10,14 @@ interface InterviewRequest {
   action: "start" | "respond" | "summarize";
   conversation?: ConversationMessage[];
   currentPhase?: number;
+}
+
+function aiError(
+  message: string,
+  retry = true,
+  suggestion = "Check your API keys in Settings or try again later."
+) {
+  return NextResponse.json({ error: message, retry, suggestion }, { status: 503 });
 }
 
 // Base questions the AI can draw from
@@ -98,10 +105,7 @@ function buildQuestionPrompt(
       : "ALL TOPICS COVERED — it's time to wrap up.\n"
   }${
     hasRecentFollowUp
-      ? `\nNoah just answered your last question. Based on his answer, decide:
-1. If his answer was detailed and thorough, move to the next topic with a smooth transition: "Great, that gives me a really clear picture. Let me shift gears — [next base question, rephrased naturally]"
-2. If there's something specific in his answer worth exploring deeper, ask ONE more follow-up question that references exactly what he said. Be specific — quote or paraphrase his words.
-\nReturn ONLY your next question as plain text. No labels, no "Interviewer:", just the question. Make it feel natural and conversational.`
+      ? `\nNoah just answered your last question. Based on his answer, decide:\n1. If his answer was detailed and thorough, move to the next topic with a smooth transition: "Great, that gives me a really clear picture. Let me shift gears — [next base question, rephrased naturally]"\n2. If there's something specific in his answer worth exploring deeper, ask ONE more follow-up question that references exactly what he said. Be specific — quote or paraphrase his words.\n\nReturn ONLY your next question as plain text. No labels, no "Interviewer:", just the question. Make it feel natural and conversational.`
       : `\nThis is the start of the conversation or the start of a new topic. Ask your question naturally — reference what Noah has shared so far if relevant. Return ONLY your question as plain text. No labels, just the question.`
   }`;
 }
@@ -135,34 +139,13 @@ Return ONLY valid JSON (no markdown, no code fences):
 CRITICAL: Make every section specific and actionable. Include actual phrases, numbers, and examples Noah used. This knowledge base will be injected into future AI prompts to analyze sales scripts — so it needs to be RICH with specific details that make the analysis hyper-relevant to 555 Digital. Don't summarize vaguely — capture the details.`;
 }
 
-async function callClaude(systemPrompt: string, userPrompt: string): Promise<string> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
-
-  const res = await fetch(ANTHROPIC_API, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 4000,
-      system: systemPrompt,
-      messages: [{ role: "user", content: userPrompt }],
-      temperature: 0.8,
-    }),
+async function callClaudeRaw(systemPrompt: string, userPrompt: string): Promise<string> {
+  const { result } = await callAI(systemPrompt, userPrompt, {
+    maxTokens: 4000,
+    temperature: 0.8,
   });
-
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Anthropic API error ${res.status}: ${err}`);
-  }
-
-  const data = await res.json();
-  const textBlocks = data.content?.filter((b: any) => b.type === "text") || [];
-  return textBlocks.map((b: any) => b.text).join("\n").trim();
+  if (!result) throw new Error("AI unavailable — all providers returned empty responses.");
+  return result.trim();
 }
 
 export async function POST(req: NextRequest) {
@@ -171,7 +154,7 @@ export async function POST(req: NextRequest) {
       await req.json();
 
     if (action === "start") {
-      const question = await callClaude(
+      const question = await callClaudeRaw(
         buildSystemPrompt(),
         `Start the interview with Noah from 555 Digital. Introduce yourself briefly and warmly, then ask the first question naturally. The first topic is: "${BASE_QUESTIONS[0].question}"
 
@@ -205,7 +188,7 @@ Return ONLY your first question/message as plain text. Keep it warm and conversa
 
       // Check if we've covered all phases
       if (nextPhase >= BASE_QUESTIONS.length) {
-        const question = await callClaude(
+        const question = await callClaudeRaw(
           buildSystemPrompt(),
           `We've covered all the main topics with Noah. Ask ONE final wrap-up question: "Is there anything else about 555 Digital, your sales process, or the market that we haven't covered but you think would be important for coaching your scripts?"
 
@@ -222,7 +205,7 @@ Return ONLY your question as plain text.`
         });
       }
 
-      const question = await callClaude(
+      const question = await callClaudeRaw(
         buildSystemPrompt(),
         buildQuestionPrompt(conversation, shouldAdvance ? nextPhase : currentPhase)
       );
@@ -240,10 +223,15 @@ Return ONLY your question as plain text.`
     }
 
     if (action === "summarize") {
-      const rawContent = await callClaude(
+      const { result: rawContent } = await callAI(
         "You are an expert knowledge base generator. Return only valid JSON, no markdown wrapping.",
-        buildSummaryPrompt(conversation)
+        buildSummaryPrompt(conversation),
+        { maxTokens: 4000, temperature: 0.7 }
       );
+
+      if (!rawContent || !rawContent.trim()) {
+        return aiError("AI returned an empty response. All providers may be unavailable.", true);
+      }
 
       let jsonStr = rawContent.trim();
       if (jsonStr.startsWith("```")) {
@@ -259,12 +247,12 @@ Return ONLY your question as plain text.`
       return NextResponse.json({ knowledgeBase: kb, isComplete: true });
     }
 
-    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid action", retry: false, suggestion: "Use start, respond, or summarize." }, { status: 400 });
   } catch (err: any) {
     console.error("Interview error:", err);
-    return NextResponse.json(
-      { error: err.message || "Interview failed" },
-      { status: 500 }
-    );
+    if (err instanceof SyntaxError) {
+      return aiError("AI returned invalid JSON for the knowledge base. Try again.", true, "The AI returned a malformed response. Try re-running the summary.");
+    }
+    return aiError(err.message || "Interview failed", true);
   }
 }

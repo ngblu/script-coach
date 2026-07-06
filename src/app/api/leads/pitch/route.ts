@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { callAI } from "@/lib/ai-server";
 
-const ANTHROPIC_API = "https://api.anthropic.com/v1/messages";
+function aiError(
+  message: string,
+  retry = true,
+  suggestion = "Check your API keys in Settings or try again later."
+) {
+  return NextResponse.json({ error: message, retry, suggestion }, { status: 503 });
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -8,16 +15,8 @@ export async function POST(req: NextRequest) {
 
     if (!businessName) {
       return NextResponse.json(
-        { error: "Business name is required" },
+        { error: "Business name is required", retry: false, suggestion: "Provide a business name to generate a pitch." },
         { status: 400 }
-      );
-    }
-
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "ANTHROPIC_API_KEY not configured" },
-        { status: 500 }
       );
     }
 
@@ -45,41 +44,20 @@ The pitch should:
 
 Return ONLY the pitch text with no additional commentary, no quotes around it, no markdown.`;
 
-    const res = await fetch(ANTHROPIC_API, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 600,
-        system: systemPrompt,
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.8,
-      }),
+    const { result: pitchText } = await callAI(systemPrompt, prompt, {
+      maxTokens: 600,
+      temperature: 0.8,
     });
 
-    if (!res.ok) {
-      const err = await res.text();
-      console.error("Anthropic API error:", res.status, err);
-      return NextResponse.json(
-        { error: `AI generation failed: ${res.status}` },
-        { status: 502 }
-      );
+    if (!pitchText || !pitchText.trim()) {
+      return aiError("AI returned an empty pitch. All providers may be unavailable.", true);
     }
 
-    const data = await res.json();
-    const textBlocks = data.content?.filter((b: any) => b.type === "text") || [];
-    const pitch = textBlocks.map((b: any) => b.text).join("\n").trim();
+    const pitch = pitchText.trim();
 
     return NextResponse.json({ pitch });
   } catch (err: any) {
     console.error("Pitch generation error:", err);
-    return NextResponse.json(
-      { error: err.message || "Failed to generate pitch" },
-      { status: 500 }
-    );
+    return aiError(err.message || "Failed to generate pitch", true);
   }
 }

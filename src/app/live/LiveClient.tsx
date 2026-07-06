@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Phone, PhoneOff, Send, Loader2, User, FileText } from "lucide-react";
+import { Phone, PhoneOff, Send, Loader2, User, FileText, RefreshCw } from "lucide-react";
 import { cn, generateId } from "@/lib/utils";
 import { useScripts } from "@/lib/store";
 import { useLeads } from "@/lib/leadsStore";
@@ -30,6 +30,7 @@ export default function LiveClient() {
   const [prospectInput, setProspectInput] = useState("");
   const [repInput, setRepInput] = useState("");
   const [coaching, setCoaching] = useState(false);
+  const [coachError, setCoachError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [startedAt, setStartedAt] = useState<string>("");
   const [elapsed, setElapsed] = useState(0);
@@ -84,6 +85,7 @@ export default function LiveClient() {
     setEntries((prev) => [...prev, entry]);
     setProspectInput("");
     setCoaching(true);
+    setCoachError(null);
 
     try {
       const coachingCards = getCoachingBrain().coachingCards.map((c) => ({
@@ -113,17 +115,28 @@ export default function LiveClient() {
 
       if (res.ok) {
         const data = await res.json();
-        pushSuggestion({
-          id: generateId(),
-          suggestion: data.suggestion,
-          urgency: data.urgency,
-          category: data.category,
-          fromCardId: data.fromCardId,
-          createdAt: new Date().toISOString(),
-        });
+        if (data.error) {
+          setCoachError(data.suggestion || data.error);
+        } else {
+          pushSuggestion({
+            id: generateId(),
+            suggestion: data.suggestion,
+            urgency: data.urgency,
+            category: data.category,
+            fromCardId: data.fromCardId,
+            createdAt: new Date().toISOString(),
+          });
+        }
+      } else {
+        try {
+          const errData = await res.json();
+          setCoachError(errData.suggestion || errData.error || "Coaching unavailable");
+        } catch {
+          setCoachError("Coaching service unavailable. Check your API keys in Settings.");
+        }
       }
     } catch {
-      // Coaching is best-effort; the call keeps going
+      setCoachError("Coaching unavailable — network error. Check your connection.");
     } finally {
       setCoaching(false);
     }
@@ -377,6 +390,32 @@ export default function LiveClient() {
             <h2 className="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-3">
               Live Coaching
             </h2>
+            {/* Coaching error */}
+            {coachError && (
+              <div className="mb-3 flex items-start gap-2 bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5 text-xs" role="alert">
+                <span className="text-amber-400 shrink-0 mt-0.5">⚠</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-amber-300">{coachError}</p>
+                  <button
+                    onClick={() => {
+                      setCoachError(null);
+                      submitProspect();
+                    }}
+                    disabled={!prospectInput.trim() || coaching}
+                    className="mt-1.5 inline-flex items-center gap-1 px-2 py-1 bg-amber-500/20 text-amber-300 rounded-md text-[10px] font-medium hover:bg-amber-500/30 transition-colors disabled:opacity-50"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    Retry
+                  </button>
+                </div>
+                <button
+                  onClick={() => setCoachError(null)}
+                  className="text-amber-400/60 hover:text-amber-400 shrink-0"
+                >
+                  ×
+                </button>
+              </div>
+            )}
             <div
               className={cn(
                 "gap-3",

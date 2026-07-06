@@ -12,6 +12,7 @@ import {
   ArrowRight,
   RotateCcw,
   Brain,
+  RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -277,16 +278,35 @@ export default function InterviewPage() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-400 flex items-center gap-2 shrink-0"
+            className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-400 shrink-0"
           >
-            <span className="shrink-0">⚠</span>
-            <span className="flex-1">{error}</span>
-            <button
-              onClick={() => setError(null)}
-              className="text-red-400/60 hover:text-red-400"
-            >
-              ×
-            </button>
+            <div className="flex items-start gap-2">
+              <span className="shrink-0 mt-0.5">⚠</span>
+              <div className="flex-1 min-w-0">
+                <span>{error}</span>
+                <div className="mt-1.5 flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      if (state?.readyToSummarize) generateSummary();
+                      else if (messages.length === 0) startInterview();
+                      else sendAnswer();
+                    }}
+                    disabled={loading}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-red-500/20 hover:bg-red-500/30 rounded-md text-xs font-medium transition-colors disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} />
+                    Retry
+                  </button>
+                  <span className="text-red-400/50 text-xs">Check your API keys in Settings or try again</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setError(null)}
+                className="text-red-400/60 hover:text-red-400 shrink-0"
+              >
+                ×
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

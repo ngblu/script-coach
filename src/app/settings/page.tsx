@@ -31,23 +31,23 @@ export default function SettingsPage() {
         <div className="bg-background border border-border rounded-lg p-4 space-y-2">
           <h3 className="text-sm font-medium text-text-primary">How it works</h3>
           <ul className="text-sm text-text-secondary space-y-1 list-disc pl-5">
-            <li>When you hit "Analyze Script", the request goes to the Hermes bridge</li>
-            <li>DeepSeek (default): fast, free via your Hermes setup, good for routine analysis</li>
-            <li>Claude Opus (toggle on): deeper analysis for high-stakes closing scripts</li>
+            <li>When you hit &quot;Analyze Script&quot;, the request goes to the Hermes bridge</li>
+            <li>DeepSeek Chat (default): fast, free via your Hermes setup, good for routine analysis</li>
+            <li>Claude Sonnet (select in the model dropdown): deeper analysis for high-stakes closing scripts</li>
             <li>The bridge must be running locally (port 8642 or the dashboard bridge relay)</li>
           </ul>
         </div>
 
         <div className="bg-background border border-border rounded-lg p-4 space-y-2">
-          <h3 className="text-sm font-medium text-text-primary">Model quality</h3>
+          <h3 className="text-sm font-medium text-text-primary">Available models</h3>
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-surface border border-primary/20 rounded-lg p-3">
-              <div className="text-xs font-medium text-primary mb-1">DeepSeek (Default)</div>
-              <div className="text-xs text-text-muted">Fast, capable analysis. Included in Hermes.</div>
+              <div className="text-xs font-medium text-primary mb-1">DeepSeek Chat (Default)</div>
+              <div className="text-xs text-text-muted">Fast, capable analysis. Runs through your local Hermes bridge — zero per-token API cost.</div>
             </div>
             <div className="bg-surface border border-accent/20 rounded-lg p-3">
-              <div className="text-xs font-medium text-accent mb-1">Claude Opus (Premium)</div>
-              <div className="text-xs text-text-muted">Deep nuance, better rewrites. Higher cost per use.</div>
+              <div className="text-xs font-medium text-accent mb-1">Claude Sonnet</div>
+              <div className="text-xs text-text-muted">Deeper nuance, better rewrites. Requires an Anthropic API key configured in your environment.</div>
             </div>
           </div>
         </div>

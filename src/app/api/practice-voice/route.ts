@@ -19,13 +19,21 @@ interface PracticeVoiceRequest {
   model?: string;
 }
 
+function aiError(
+  message: string,
+  retry = true,
+  suggestion = "Check your API keys in Settings or try again later."
+) {
+  return NextResponse.json({ error: message, retry, suggestion }, { status: 503 });
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body: PracticeVoiceRequest = await req.json();
     const { messages, script, industry, leadContext, leadName, model } = body;
 
     if (!messages || messages.length === 0) {
-      return NextResponse.json({ error: "No messages provided" }, { status: 400 });
+      return NextResponse.json({ error: "No messages provided", retry: false, suggestion: "Provide at least one message." }, { status: 400 });
     }
 
     const lastRepMessage = messages[messages.length - 1]?.content || "Hello";
@@ -56,14 +64,14 @@ ${script || "No script provided"}`;
 
     const prompt = `Conversation so far:\n${conversationLog}\n\nThe rep just said: "${lastRepMessage}"\n\nRespond in character as the prospect. 1-2 sentences maximum, spoken words only.`;
 
-    const text = await callAI(systemPrompt, prompt, {
-      model: model || "claude-sonnet-4-20250514",
+    const { result: text, model_used, attempt_number } = await callAI(systemPrompt, prompt, {
+      model: model || undefined,
       maxTokens: 200,
       temperature: 0.9,
     });
 
     if (!text || !text.trim()) {
-      return NextResponse.json({ error: "Empty response from AI" }, { status: 500 });
+      return aiError("AI returned an empty response. All providers may be unavailable.", true);
     }
 
     // Clean any accidental formatting for clean TTS output
@@ -73,10 +81,10 @@ ${script || "No script provided"}`;
       .replace(/^["']|["']$/g, "")
       .trim();
 
-    return NextResponse.json({ text: clean });
+    return NextResponse.json({ text: clean, model_used, attempt_number });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Practice voice failed";
     console.error("Practice voice error:", err);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return aiError(message, true);
   }
 }

@@ -12,6 +12,7 @@ import {
   GraduationCap,
   AlertCircle,
   X,
+  RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { IngestResult, IngestSourceType, BrainKind } from "@/lib/brains/types";
@@ -43,6 +44,8 @@ export default function UploadZone({ defaultType = "document" }: UploadZoneProps
   const [error, setError] = useState<string | null>(null);
   const [pasteText, setPasteText] = useState("");
   const [contentType, setContentType] = useState<IngestSourceType>(defaultType);
+  const [lastIngestContent, setLastIngestContent] = useState<string>("");
+  const [lastIngestFileName, setLastIngestFileName] = useState<string | undefined>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const runIngest = useCallback(
@@ -51,6 +54,8 @@ export default function UploadZone({ defaultType = "document" }: UploadZoneProps
       setError(null);
       setResult(null);
       setProgress(10);
+      setLastIngestContent(content);
+      setLastIngestFileName(fileName);
 
       // Animate progress while AI works
       const interval = setInterval(() => {
@@ -253,8 +258,19 @@ export default function UploadZone({ defaultType = "document" }: UploadZoneProps
             role="alert"
           >
             <AlertCircle className="w-4 h-4 text-danger shrink-0 mt-0.5" />
-            <p className="text-sm text-danger flex-1">{error}</p>
-            <button onClick={reset} className="text-text-muted hover:text-text-primary" aria-label="Dismiss error">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-danger">{error}</p>
+              {lastIngestContent && (
+                <button
+                  onClick={() => runIngest(lastIngestContent, lastIngestFileName)}
+                  className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-danger/20 text-danger rounded-md text-xs font-medium hover:bg-danger/30 transition-colors"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  Retry
+                </button>
+              )}
+            </div>
+            <button onClick={reset} className="text-text-muted hover:text-text-primary shrink-0" aria-label="Dismiss error">
               <X className="w-4 h-4" />
             </button>
           </motion.div>
