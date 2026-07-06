@@ -5,10 +5,12 @@
 // ============================================================
 
 // ---- Configurable default model ---------------------------------
-// Anthropic models: https://docs.anthropic.com/en/docs/about-claude/models
-// claude-3-5-sonnet-20241022 — latest Claude 3.5 Sonnet (established)
-// claude-sonnet-4-20250514      — Claude Sonnet 4 (newer; verify availability)
-export const DEFAULT_AI_MODEL = "claude-3-5-sonnet-20241022";
+// Anthropic models from Noah's key (verified 2026-07-06):
+// claude-sonnet-5 — latest, best general-purpose
+// claude-fable-5 — optimized for code generation
+// claude-sonnet-4-6 — stable Sonnet 4
+// claude-opus-4-8 — most capable, slowest
+export const DEFAULT_AI_MODEL = "claude-sonnet-5";
 
 // ---- Anthropic key check on module load (no API call) -----------
 const ANTHROPIC_KEY_WARNING = !process.env.ANTHROPIC_API_KEY

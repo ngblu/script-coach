@@ -15,12 +15,17 @@ const MODELS: ModelInfo[] = [
   {
     id: "deepseek/deepseek-chat",
     name: "DeepSeek Chat",
-    description: "Fast & cheap — great for routine analysis",
+    description: "Fast & affordable — needs DEEPSEEK_API_KEY on Vercel",
   },
   {
-    id: "anthropic/claude-sonnet-4",
-    name: "Claude Sonnet",
-    description: "Deeper analysis — better for high-stakes scripts",
+    id: "anthropic/claude-sonnet-5",
+    name: "Claude Sonnet 5",
+    description: "Latest — best for analysis & coaching",
+  },
+  {
+    id: "anthropic/claude-fable-5",
+    name: "Claude Fable 5",
+    description: "Code-gen optimized — great for script rewrites",
   },
 ];
 
