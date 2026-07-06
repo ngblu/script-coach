@@ -103,10 +103,6 @@ function ScriptDetailInner({ id }: { id: string }) {
     [script]
   );
 
-  if (!resolvedParams) {
-    return <div className="p-8 text-text-muted">Loading...</div>;
-  }
-
   if (!script) {
     return (
       <div className="p-8 text-center">
