@@ -105,11 +105,36 @@ I'll do this: I'll send you a few examples of what I've done for other local bus
 
 function DashboardInner() {
   const scripts = useScripts();
-  const searchParams = useSearchParams();
   const router = useRouter();
   const [showNew, setShowNew] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [loadingSamples, setLoadingSamples] = useState(false);
+
+  // Auto-load sample scripts on first visit if no scripts exist
+  const [samplesAutoLoaded, setSamplesAutoLoaded] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const alreadySeeded = localStorage.getItem("script-coach-scripts-seeded");
+    if (!alreadySeeded && scripts.length === 0 && !samplesAutoLoaded && !loadingSamples) {
+      setSamplesAutoLoaded(true);
+      localStorage.setItem("script-coach-scripts-seeded", "true");
+      SAMPLE_SCRIPTS.forEach((s) => {
+        const id = generateId();
+        const now = new Date().toISOString();
+        addScript({
+          id,
+          title: s.title,
+          content: s.content,
+          createdAt: now,
+          updatedAt: now,
+          versions: [{ id: generateId(), content: s.content, createdAt: now, label: "v1" }],
+          analyses: [],
+          outcomes: [],
+          tags: ["sample"],
+        });
+      });
+    }
+  }, [scripts, samplesAutoLoaded, loadingSamples]);
 
   const totalOutcomes = scripts.reduce((sum, s) => sum + s.outcomes.length, 0);
   const wonCount = scripts.reduce(
